@@ -12,7 +12,7 @@ import (
 //utility for manage plugins ssh connection
 
 //create a ssh client
-func Getsshclient(host string, user string, key string) (*ssh.Client, err) {
+func Getsshclient(host string, user string, key string) (*ssh.Client, error) {
 	sshconf, err := getsshconfig(user, key)
 	if err != nil {
 		return nil, err
@@ -27,7 +27,7 @@ func Getsshclient(host string, user string, key string) (*ssh.Client, err) {
 }
 
 //create a ssh client configuration with kay auth
-func getsshconfig(user string, keyfile string) (*ssh.ClientConfig, err) {
+func getsshconfig(user string, keyfile string) (*ssh.ClientConfig, error) {
 	buffer, err := ioutil.ReadFile(keyfile)
 	if err != nil {
 		return nil, err
@@ -64,10 +64,10 @@ func Sshcmd(con *ssh.Client, cmd string) string {
 	return outs[0 : len(outs)-1]
 }
 
-func GetClientSFTP(con *ssh.Client) (*sftp.Client, err) {
+func GetClientSFTP(con *ssh.Client) (*sftp.Client, error) {
 	client, err := sftp.NewClient(con)
 	if err != nil {
-		return ""
+		return nil, err
 	}
 	return client, nil
 }
@@ -78,7 +78,7 @@ func GetFileSFTP(con *sftp.Client, src string, dst string, perm os.FileMode) err
 		return err
 	}
 	var bfile []byte
-	_, err := sfile.Read(bfile)
+	_, err = sfile.Read(bfile)
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func PutFileSFTP(con *sftp.Client, src string, dst string, perm os.FileMode) err
 	if err != nil {
 		return err
 	}
-	var sfile sftp.File
+	var sfile *sftp.File
 	sfile, err = con.Create(dst)
 	if err != nil {
 		sfile, err = con.Open(dst)
@@ -107,7 +107,7 @@ func PutFileSFTP(con *sftp.Client, src string, dst string, perm os.FileMode) err
 	if err != nil {
 		return err
 	}
-	_, err := sfile.Write()
+	_, err = sfile.Write(bfile)
 	if err != nil {
 		return err
 	}

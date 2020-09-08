@@ -1,6 +1,9 @@
 package utils
 
-import "regexp"
+import (
+	"errors"
+	"regexp"
+)
 
 //this packageprovide the common struct and interface for build plugins
 
@@ -8,47 +11,53 @@ import "regexp"
 //  - a variable of any type that implements this interface must be exported
 //  - the variable exported above must be named "Pkg"
 type Pkg interface {
-	Run(subcommand string, mainarg string, config *Config, inv Inventory)
+	Run(subcommand string, mainarg string, config *PkgConf, inv *Inventory, sshconf *SshConfig)
 	GetCommand() *Command
 }
 
+//this config is a specific plugin config than will be nested in the conf.yml
+//pkgconf:
+//  [command]:
+//     key: value
+type PkgConf map[string]string
+
 //option (or flags) definition mapped in each subcommand
-//E.G netq-tool <command> <subcommand> [ -l (this is an optional flag) ]
+//E.G netq-tool <command> <subcommand> [ -l (this is an optional flag) ] [mainarg]
 //option can have by parametrized by set Option.HasField = true
 //option that has Option.IsRequired = true implicity must have a filed
 //field is the default value
-//if ConfName is not empty string than an option is written in the conf as below
-//cmd:
-//  `cmd-name`:
-//    `ConfName`: `Field`
 type Option struct {
 	IsRequired  bool
 	HasField    bool
-	Field       string
+	FieldName   string
+	Values      []string
 	Description string
-	ConfName    string
 }
 
 //used by netq-tool plugins to provide a list of actions
 type Subcommand struct {
 	Options     map[string]*Option
 	Description string
+	HasMainarg  bool
+	MainArgDscr string
 }
 
 //used by netq-tool plugins to define command (or plugin name spec)
 //Command.command is the "plugin name" used by netq-tool
+//E.G netq-tool <command> <subcommand> [ -l (this is an optional flag) ] [mainarg]
 type Command struct {
 	Version     string
 	Command     string
 	Subcommands map[string]*Subcommand
 	Description string
+	Config      PkgConf
 }
 
 //to succesfully create an inventory plugin:
 //  - a variable of any type that implements this interface must be exported
 //  - the variable exported above must be named "Inventory"
 type Inventory interface {
-	FetchInvetory()
+	FetchInvetory(conf *InventoryConf)
 	GetInvetory() []Host
 	GetSpec() *InventorySpec
 }
@@ -91,21 +100,35 @@ type Bcache struct {
 
 //used by inventory plugin to define informations about itself
 type InventorySpec struct {
+	Name        string
 	Description string
 	Version     string
+	Config      InventoryConf
 }
+
+type InventoryConf map[string]string
 
 //netq-tool configurations (currently config.yaml)
 //WIP: not all the parameters are currently used (commented means not used)
 //  - JUJU and MAAS config must be in a separate config (like inventory.yaml)
 type Config struct {
-	SshUser string `yaml:"SshUser"`
-	SshKey  string `yaml:"SshKey"`
-	Cmd     map[string]map[string]string
-	Inv     map[string]map[string]string
+	GlobalConf
+	SshConfig
+	InventoryConf map[string]*InventoryConf
+	PkgConf       map[string]*PkgConf
 }
 
-func GetHost(p *Inventory, host string) (*Host, error) {
+type GlobalConf struct {
+	LogLevel string
+	LogFile  string
+}
+
+type SshConfig struct {
+	SshUser string
+	SshKey  string
+}
+
+func GetHost(p Inventory, host string) (*Host, error) {
 	re, _ := regexp.Compile(host)
 	for _, hst := range p.GetInvetory() {
 		if re.MatchString(hst.Fqdn) {

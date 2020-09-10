@@ -41,6 +41,12 @@ func myCaller() string {
 var isInit = false
 
 func LoggerInit(loglevel string, logpath string) {
+
+	//check is is arleady be initializzed
+	if isInit {
+		return
+	}
+
 	// Log as JSON instead of the default ASCII formatter.
 	log.SetFormatter(&log.TextFormatter{})
 
@@ -77,20 +83,21 @@ func LoggerInit(loglevel string, logpath string) {
 	isInit = true
 }
 
-//ONLY for broken code
+//early releases/test log function
+//use ONLY for BROKEN code or for WIP features
 func LogPanic(s ...interface{}) {
-	fmt.Print("PANIC: " + myCaller() + " ")
-	fmt.Println(s...)
+	fmt.Fprint(os.Stderr, "PANIC: "+myCaller()+" ")
+	fmt.Fprintln(s...)
 	if isInit {
 		log.Panic(s)
 	}
 	os.Exit(1)
 }
 
-//could not proceed
+//could not proceed. Log & exit
 func LogFatal(s ...interface{}) {
-	fmt.Print("FATAL: " + myCaller() + " ")
-	fmt.Println(s...)
+	fmt.Fprint(os.Stderr, "FATAL: "+myCaller()+" ")
+	fmt.Fprintln(s...)
 	if isInit {
 		log.Fatal(s...)
 	}
@@ -99,14 +106,15 @@ func LogFatal(s ...interface{}) {
 
 //some non-bloking errors
 func LogError(s ...interface{}) {
-	fmt.Print("ERROR: " + myCaller() + " ")
-	fmt.Println(s...)
+	fmt.Fprint(os.Stderr, "ERROR: "+myCaller()+" ")
+	fmt.Fprintln(s...)
 	if isInit {
 		log.Error(s...)
 	}
 }
 
 //highlighted info
+//user must be awere of this info
 func LogWarn(s ...interface{}) {
 	fmt.Print(" WARN: " + myCaller() + " ")
 	fmt.Println(s...)
@@ -116,24 +124,28 @@ func LogWarn(s ...interface{}) {
 }
 
 //normal info
+//print out the current procedure step
 func LogInfo(s ...interface{}) {
-	fmt.Print(" INFO: " + myCaller() + " ")
+	fmt.Print(" INFO: ")
 	fmt.Println(s...)
 	if isInit {
 		log.Info(s...)
 	}
 }
 
-//some code vars
-func LogDebug(s ...interface{}) {
-	fmt.Print("DEBUG: " + myCaller() + " ")
+//print code vars
+func LogDebug(vars map[string]interface{}, s ...interface{}) {
+	fmt.Print("DEBUG: ")
+	for k, v := range vars {
+		fmt.Printf("%s=%s ", k, v)
+	}
 	fmt.Println(s...)
 	if isInit {
-		log.Debug(s...)
+		log.WithFields(log.Fields(vars)).Debug(s...)
 	}
 }
 
-//fmt.println("your code block")
+//fmt.println("your code line")
 func LogTrace(s ...interface{}) {
 	fmt.Print("TRACE: " + myCaller() + " ")
 	fmt.Println(s...)
